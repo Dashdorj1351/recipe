@@ -2,7 +2,7 @@ require("@babel/polyfill");
 import Search from "./model/Search";
 import { elements, renderLoader, clearLoader } from "./view/base";
 import * as searchVeiw from "./view/searchView";
-
+import Recipe from "./model/Recipe";
 
 /**
  * web app төлөв
@@ -35,3 +35,13 @@ elements.searchform.addEventListener('submit', e => {
     e.preventDefault();
     controlSearch();
 });
+elements.pageButtons.addEventListener('click', e => {
+    const btn = e.target.closest ('.btn-inline');
+    if(btn) {
+        const gotoPageNumber= parseInt(btn.dataset.goto, 10);
+        searchVeiw.clearSearchResult();
+        searchVeiw.renderRecipes(state.search.result, gotoPageNumber);
+    }
+});
+const r = new Recipe(47746);
+r.getRecipe();
