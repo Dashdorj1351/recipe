@@ -1,8 +1,15 @@
 require("@babel/polyfill");
+import * as searchVeiw from "./view/searchView";
+import * as listView from "./view/listView";
+import * as likesView from "./view/likesView";
 import Search from "./model/Search";
 import { elements, renderLoader, clearLoader } from "./view/base";
-import * as searchVeiw from "./view/searchView";
 import Recipe from "./model/Recipe";
+import { renderRecipe, clearRecipe, highLihttSeletrdRecipe } from "./view/recipeView";
+import List from "./model/List";
+import Like from "./model/Like";
+
+
 
 /**
  * web app төлөв
@@ -43,5 +50,80 @@ elements.pageButtons.addEventListener('click', e => {
         searchVeiw.renderRecipes(state.search.result, gotoPageNumber);
     }
 });
-const r = new Recipe(47746);
-r.getRecipe();
+
+/**
+ * Жорын контролер
+ */
+const controlRecipe = async() => {
+    // URl-аас ID салгах
+    const id = window.location.hash.replace('#', '');
+    if(id){
+        // Жорын моделийг үүсгэж өгнө.
+        state.recipe = new Recipe(id);
+        // UI дэлгэц бэлдэнэ
+        clearRecipe();
+        renderLoader(elements.recipeDiv);
+        highLihttSeletrdRecipe(id)
+        // Жороо татаж авчирна
+        await state.recipe.getRecipe();
+        // Жорын тооцоолно
+        clearLoader();
+        state.recipe.calcTime();
+        state.recipe.calcHuniiToo();
+        // Жороо үзүүлнэ.
+        renderRecipe(state.recipe, state.likes.isLiked(id));
+    };
+};
+['hashchange', 'load'].forEach(event => window.addEventListener(event, controlRecipe));
+window.addEventListener('load', e => {
+    if(!state.likes) state.likes = new Like();
+    likesView.toggleLikeMenu(state.likes.getNumberLikes());
+    state.likes.likes.forEach(Like => likesView.renderLike(Like));
+});
+/**
+ * Найрлагны контролер
+ */
+const controlList = () => {
+    // найрлагны тодел үүсгэнэ
+    state.list = new List();
+    listView.clearList();
+    state.recipe.ingredients.forEach(n => {
+        const item = state.list.addItems(n);
+        listView.renderItem(item);
+    });
+};
+/**
+ * Like контролер
+ */
+const controlLike = () => {
+    // Модел үүсгэнэ.
+    if(!state.likes) state.likes = new Like();
+    // Одоо харагдаж байгаа жорын id олж авах
+    const cuurrentRecipe = state.recipe.id;
+    // энэ жорыг шалгах LIKe болиулна эсвэл эсэргээрээ
+    if(state.likes.isLiked(cuurrentRecipe)){
+        state.likes.delLike(cuurrentRecipe);
+        likesView.dislike(cuurrentRecipe);
+        likesView.toggleLiked(false);
+    }else {
+        const newLike = state.likes.addLike(cuurrentRecipe, state.recipe.title, state.recipe.publisher, state.recipe.image_url);
+        likesView.toggleLiked(true);
+        likesView.renderLike(newLike);
+    };
+    likesView.toggleLikeMenu(state.likes.getNumberLikes());
+};
+elements.recipeDiv.addEventListener('click', e => {
+    if(e.target.matches('.recipe__btn, .recipe__btn *')) {
+        controlList();
+    } else if (e.target.matches('.recipe__love, .recipe__love *')) {
+        controlLike();
+    };
+});
+elements.shoppingList.addEventListener('click', e => {
+    // id шүүлээ
+    const id = e.target.closest('.shopping__item').dataset.itemid;
+    // орцыг устгана
+    state.list.delItem(id);
+    //  дэлгэцээр устгана
+    listView.delItem(id);
+});
